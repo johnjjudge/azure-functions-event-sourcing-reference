@@ -1,0 +1,35 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+
+    "DiscoverSchedule": "0 */1 * * * *",
+    "PollSchedule": "0 */5 * * * *",
+
+    "Workflow:IntakeBatchSize": "50",
+    "Workflow:PollBatchSize": "200",
+    "Workflow:LeaseDuration": "00:30:00",
+    "Workflow:PollInterval": "00:05:00",
+    "Workflow:MaxSubmitAttempts": "3",
+    "Workflow:IdempotencyLeaseDuration": "00:02:00",
+
+    "EventGrid:TopicEndpoint": "",
+    "EventGrid:TopicKey": "",
+
+    "Table:AccountUri": "",
+    "Table:ConnectionString": "",
+    "Table:TableName": "Intake",
+
+    "Cosmos:AccountEndpoint": "",
+    "Cosmos:ConnectionString": "",
+    "Cosmos:DatabaseName": "workflow",
+    "Cosmos:EventsContainerName": "events",
+    "Cosmos:ProjectionsContainerName": "requests",
+    "Cosmos:IdempotencyContainerName": "idempotency",
+
+    "ExternalService:BaseUrl": "http://localhost:5055",
+    "ExternalService:Audience": "api://externalservice",
+    "ExternalService:RequireAuth": "false"
+  }
+}
