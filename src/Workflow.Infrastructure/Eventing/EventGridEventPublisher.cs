@@ -54,7 +54,7 @@ public sealed class EventGridEventPublisher : IEventPublisher
         if (string.IsNullOrWhiteSpace(subject)) throw new ArgumentException("Subject is required.", nameof(subject));
         if (string.IsNullOrWhiteSpace(eventId)) throw new ArgumentException("Event id is required.", nameof(eventId));
 
-        var cloudEvent = new CloudEvent(_options.Source, eventType, data)
+        var cloudEvent = new CloudEvent(_options.Source.ToString(), eventType, data)
         {
             Id = eventId,
             Subject = subject,
@@ -83,7 +83,16 @@ public sealed class EventGridEventPublisher : IEventPublisher
 
         // These are CloudEvents extension attributes.
         // The names are intentionally simple and stable for demo purposes.
-        cloudEvent["correlationId"] = ctx.CorrelationId;
-        cloudEvent["causationId"] = ctx.CausationId;
+        var extensions = cloudEvent.ExtensionAttributes;
+        if (extensions is null)
+        {
+            return;
+        }
+
+        extensions["correlationId"] = ctx.CorrelationId;
+        if (!string.IsNullOrWhiteSpace(ctx.CausationId))
+        {
+            extensions["causationId"] = ctx.CausationId;
+        }
     }
 }

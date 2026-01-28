@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Workflow.Application.Abstractions;
 using Workflow.Domain.Model;
+using Workflow.Domain.ValueObjects;
 
 namespace Workflow.Infrastructure.ExternalService;
 

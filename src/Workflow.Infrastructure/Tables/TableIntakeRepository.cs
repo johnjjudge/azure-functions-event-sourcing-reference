@@ -25,10 +25,11 @@ public sealed class TableIntakeRepository : ITableIntakeRepository
     /// <inheritdoc />
     public async Task<IReadOnlyList<IntakeRow>> GetAvailableUnprocessedAsync(int take, DateTimeOffset nowUtc, CancellationToken cancellationToken)
     {
-        // OData filter: Status == 'Unprocessed' AND LeaseUntilUtc <= now
+        // OData filter: (Status == 'Unprocessed' OR Status == 'InProgress') AND LeaseUntilUtc <= now
+        // This allows expired leases to be reclaimed while excluding terminal rows.
         // Azure Tables expects UTC timestamps. Use a Z-suffixed format (no offset component).
         var nowZ = nowUtc.UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ");
-        var filter = $"Status eq '{WorkItemStatus.Unprocessed}' and LeaseUntilUtc le datetime'{nowZ}'";
+        var filter = $"(Status eq '{WorkItemStatus.Unprocessed}' or Status eq '{WorkItemStatus.InProgress}') and LeaseUntilUtc le datetime'{nowZ}'";
 
         var results = new List<IntakeRow>(capacity: Math.Max(0, take));
 
@@ -47,9 +48,13 @@ public sealed class TableIntakeRepository : ITableIntakeRepository
     /// <inheritdoc />
     public async Task<bool> TryClaimAsync(IntakeRow row, DateTimeOffset leaseUntilUtc, CancellationToken cancellationToken)
     {
-        // Defensive check: we only claim Unprocessed rows. If upstream logic changes,
-        // this prevents accidental state transitions.
-        if (row.Status != WorkItemStatus.Unprocessed)
+        var nowUtc = DateTimeOffset.UtcNow;
+        var isEligible = row.Status == WorkItemStatus.Unprocessed
+            || (row.Status == WorkItemStatus.InProgress && row.LeaseUntilUtc <= nowUtc);
+
+        // Defensive check: only claim eligible rows. This prevents accidental transitions
+        // if upstream logic changes or the lease has not yet expired.
+        if (!isEligible)
         {
             return false;
         }

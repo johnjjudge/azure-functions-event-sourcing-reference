@@ -32,8 +32,9 @@ public interface ITableIntakeRepository
         CancellationToken cancellationToken);
 
     /// <summary>
-    /// Attempts to claim a row by transitioning it from <see cref="WorkItemStatus.Unprocessed"/> to
-    /// <see cref="WorkItemStatus.InProgress"/> and setting a lease expiration time.
+    /// Attempts to claim a row by transitioning it from <see cref="WorkItemStatus.Unprocessed"/> (or an
+    /// expired <see cref="WorkItemStatus.InProgress"/> lease) to <see cref="WorkItemStatus.InProgress"/>
+    /// and setting a new lease expiration time.
     /// </summary>
     /// <param name="row">The row to claim.</param>
     /// <param name="leaseUntilUtc">Lease expiration in UTC.</param>
@@ -58,7 +59,7 @@ public interface ITableIntakeRepository
 /// </summary>
 /// <param name="Keys">PartitionKey and RowKey.</param>
 /// <param name="Status">Current work status.</param>
-/// <param name="LeaseUntilUtc">Lease expiration in UTC. If <= now, the row is eligible for claiming.</param>
+/// <param name="LeaseUntilUtc">Lease expiration in UTC. If the value is less than or equal to now, the row is eligible for claiming.</param>
 /// <param name="ETag">Row ETag used for optimistic concurrency.</param>
 public sealed record IntakeRow(
     TableKeys Keys,

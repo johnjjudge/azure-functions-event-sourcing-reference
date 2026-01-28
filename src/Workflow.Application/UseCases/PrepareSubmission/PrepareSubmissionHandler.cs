@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Workflow.Application.Abstractions;
@@ -27,6 +28,8 @@ namespace Workflow.Application.UseCases.PrepareSubmission;
 public sealed class PrepareSubmissionHandler
 {
     private const string HandlerName = "PrepareSubmission";
+
+    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
 
     private readonly IIdempotencyStore _idempotency;
     private readonly IEventStore _eventStore;
@@ -133,9 +136,33 @@ public sealed class PrepareSubmissionHandler
             if (aggregate.HasPreparedSubmission(attempt))
             {
                 _logger.LogInformation(
-                    "Request {RequestId} already prepared attempt {Attempt}; skipping.",
+                    "Request {RequestId} already prepared attempt {Attempt}; re-publishing stored event.",
                     requestId.Value,
                     attempt);
+
+                if (TryFindPreparedEvent(history, attempt, out var existing))
+                {
+                    _correlation.Current = new CorrelationContext(
+                        existing.Event.CorrelationId ?? correlationId,
+                        existing.Event.CausationId ?? causationId);
+
+                    await _projectionUpdater.RebuildAndSaveAsync(requestId, cancellationToken).ConfigureAwait(false);
+
+                    await _publisher.PublishAsync(
+                        eventType: EventTypes.SubmissionPrepared,
+                        subject: Subjects.ForRequest(requestId.Value),
+                        eventId: existing.Event.EventId,
+                        data: existing.Payload,
+                        cancellationToken: cancellationToken).ConfigureAwait(false);
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "Stored submission-prepared event not found for {RequestId} Attempt={Attempt}.",
+                        requestId.Value,
+                        attempt);
+                }
+
                 await _idempotency.MarkCompletedAsync(HandlerName, command.TriggeringEventId, cancellationToken).ConfigureAwait(false);
                 return;
             }
@@ -189,5 +216,29 @@ public sealed class PrepareSubmissionHandler
         {
             _correlation.Current = null;
         }
+    }
+
+    private static bool TryFindPreparedEvent(
+        IReadOnlyList<StoredEvent> history,
+        int attempt,
+        out (StoredEvent Event, SubmissionPreparedPayload Payload) prepared)
+    {
+        foreach (var e in history)
+        {
+            if (!string.Equals(e.EventType, EventTypes.SubmissionPrepared, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var payload = e.Data.Deserialize<SubmissionPreparedPayload>(SerializerOptions);
+            if (payload is not null && payload.Attempt == attempt)
+            {
+                prepared = (e, payload);
+                return true;
+            }
+        }
+
+        prepared = default;
+        return false;
     }
 }

@@ -106,13 +106,15 @@ public sealed class ScheduleDuePollsHandler
             var attempt = projection.SubmitAttemptCount;
             var dueAt = projection.NextPollAtUtc ?? now;
 
-            _correlation.Current = new CorrelationContext(correlationId, causationId: null);
+            _correlation.Current = new CorrelationContext(correlationId, CausationId: null);
 
             try
             {
+                var externalJobId = projection.ExternalJobId.Value;
+
                 var payload = new JobPollRequestedPayload(
                     RequestId: requestId.Value,
-                    ExternalJobId: projection.ExternalJobId.Value,
+                    ExternalJobId: externalJobId.Value,
                     Attempt: attempt);
 
                 // Deterministic within the poll interval so retries don't create additional events.

@@ -36,15 +36,21 @@ public sealed class EventGridSinkFunction
     public Task Run([EventGridTrigger] CloudEvent cloudEvent, CancellationToken cancellationToken)
     {
         _correlation.Current = CloudEventHelpers.ExtractCorrelation(cloudEvent);
+        try
+        {
+            _logger.LogInformation(
+                "Received CloudEvent Type={Type} Id={Id} Subject={Subject} Source={Source}",
+                cloudEvent.Type,
+                cloudEvent.Id,
+                cloudEvent.Subject,
+                cloudEvent.Source);
 
-        _logger.LogInformation(
-            "Received CloudEvent Type={Type} Id={Id} Subject={Subject} Source={Source}",
-            cloudEvent.Type,
-            cloudEvent.Id,
-            cloudEvent.Subject,
-            cloudEvent.Source);
-
-        // Nothing else to do for the plumbing slice.
-        return Task.CompletedTask;
+            // Nothing else to do for the plumbing slice.
+            return Task.CompletedTask;
+        }
+        finally
+        {
+            _correlation.Current = null;
+        }
     }
 }

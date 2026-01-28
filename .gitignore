@@ -1,0 +1,28 @@
+# Build outputs
+**/bin/
+**/obj/
+artifacts/
+out/
+app.zip
+
+# Azure Functions local settings (contains secrets)
+**/local.settings.json
+
+# Test results
+TestResults/
+
+# User/IDE
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vscode/
+
+# OS / temp
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.cache
+*.temp
+*.swp

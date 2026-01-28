@@ -45,13 +45,12 @@ public static class CloudEventHelpers
             throw new InvalidOperationException("CloudEvent.Data is null.");
         }
 
-        return cloudEvent.Data switch
+        var result = cloudEvent.Data.ToObjectFromJson<T>(SerializerOptions);
+        if (result is null)
         {
-            BinaryData binary => binary.ToObjectFromJson<T>(SerializerOptions),
-            JsonElement json => json.Deserialize<T>(SerializerOptions)
-                                ?? throw new InvalidOperationException($"Failed to deserialize {typeof(T).Name} from JsonElement."),
-            _ => JsonSerializer.Deserialize<T>(cloudEvent.Data.ToString() ?? string.Empty, SerializerOptions)
-                 ?? throw new InvalidOperationException($"Failed to deserialize {typeof(T).Name} from CloudEvent data."),
-        };
+            throw new InvalidOperationException($"Failed to deserialize {typeof(T).Name} from CloudEvent data.");
+        }
+
+        return result;
     }
 }

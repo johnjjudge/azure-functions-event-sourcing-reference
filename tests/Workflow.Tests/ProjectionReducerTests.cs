@@ -10,9 +10,10 @@ namespace Workflow.Tests;
 /// <summary>
 /// Unit tests for <see cref="RequestProjectionReducer"/>.
 /// </summary>
+[TestClass]
 public sealed class ProjectionReducerTests
 {
-    [Fact]
+    [TestMethod]
     public void RequestDiscovered_creates_InProgress_projection()
     {
         var reducer = new RequestProjectionReducer(new WorkflowOptions());
@@ -26,16 +27,16 @@ public sealed class ProjectionReducerTests
 
         var projection = reducer.Apply(null, stored);
 
-        Assert.Equal("p|r", projection.Id);
-        Assert.Equal("p|r", projection.RequestId.Value);
-        Assert.Equal("p", projection.PartitionKey);
-        Assert.Equal("r", projection.RowKey);
-        Assert.Equal(WorkItemStatus.InProgress, projection.Status);
-        Assert.Equal(0, projection.SubmitAttemptCount);
-        Assert.Equal(1, projection.LastAppliedEventVersion);
+        Assert.AreEqual("p|r", projection.Id);
+        Assert.AreEqual("p|r", projection.RequestId.Value);
+        Assert.AreEqual("p", projection.PartitionKey);
+        Assert.AreEqual("r", projection.RowKey);
+        Assert.AreEqual(WorkItemStatus.InProgress, projection.Status);
+        Assert.AreEqual(0, projection.SubmitAttemptCount);
+        Assert.AreEqual(1, projection.LastAppliedEventVersion);
     }
 
-    [Fact]
+    [TestMethod]
     public void TerminalStatusReached_sets_Pass_or_Fail_and_clears_poll()
     {
         var reducer = new RequestProjectionReducer(new WorkflowOptions());
@@ -54,10 +55,10 @@ public sealed class ProjectionReducerTests
 
         var projection = reducer.ApplyAll(null, new[] { discovered, submitted, terminal });
 
-        Assert.Equal(WorkItemStatus.Pass, projection.Status);
-        Assert.Null(projection.NextPollAtUtc);
-        Assert.Equal("job-123", projection.ExternalJobId?.Value);
-        Assert.Equal(3, projection.LastAppliedEventVersion);
+        Assert.AreEqual(WorkItemStatus.Pass, projection.Status);
+        Assert.IsNull(projection.NextPollAtUtc);
+        Assert.AreEqual("job-123", projection.ExternalJobId?.Value);
+        Assert.AreEqual(3, projection.LastAppliedEventVersion);
     }
 
     private static StoredEvent ToStoredEvent(string eventType, object payload, int version)

@@ -5,9 +5,10 @@ namespace Workflow.Tests;
 /// <summary>
 /// Unit tests for deterministic event id generation.
 /// </summary>
+[TestClass]
 public sealed class EventIdFactoryTests
 {
-    [Fact]
+    [TestMethod]
     public void CreateDeterministic_Is_Stable_For_Same_Inputs()
     {
         var factory = new DeterministicEventIdFactory();
@@ -24,10 +25,10 @@ public sealed class EventIdFactoryTests
             correlationId: "corr",
             causationId: "cause");
 
-        Assert.Equal(a, b);
+        Assert.AreEqual(a, b);
     }
 
-    [Fact]
+    [TestMethod]
     public void CreateDeterministic_Changes_When_Discriminator_Changes()
     {
         var factory = new DeterministicEventIdFactory();
@@ -35,6 +36,6 @@ public sealed class EventIdFactoryTests
         var a = factory.CreateDeterministic("p|r", "t", "c", "x", discriminator: "1");
         var b = factory.CreateDeterministic("p|r", "t", "c", "x", discriminator: "2");
 
-        Assert.NotEqual(a, b);
+        Assert.AreNotEqual(a, b);
     }
 }

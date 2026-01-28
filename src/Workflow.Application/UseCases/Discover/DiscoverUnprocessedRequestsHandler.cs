@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Workflow.Application.Abstractions;
@@ -26,6 +27,8 @@ namespace Workflow.Application.UseCases.Discover;
 /// </remarks>
 public sealed class DiscoverUnprocessedRequestsHandler
 {
+    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
+
     private readonly ITableIntakeRepository _intake;
     private readonly IEventStore _eventStore;
     private readonly IEventPublisher _publisher;
@@ -105,7 +108,7 @@ public sealed class DiscoverUnprocessedRequestsHandler
             var correlationId = requestId.Value; // stable per workflow instance
 
             // Establish ambient correlation so the event publisher stamps CloudEvent extensions.
-            _correlation.Current = new CorrelationContext(correlationId, causationId: null);
+            _correlation.Current = new CorrelationContext(correlationId, CausationId: null);
 
             try
             {
@@ -141,8 +144,34 @@ public sealed class DiscoverUnprocessedRequestsHandler
                 catch (ConcurrencyException)
                 {
                     _logger.LogInformation(
-                        "Discovery event already exists for {RequestId}; skipping publish.",
+                        "Discovery event already exists for {RequestId}; attempting re-publish.",
                         requestId.Value);
+
+                    var history = await _eventStore.ReadStreamAsync(requestId, cancellationToken).ConfigureAwait(false);
+                    if (TryFindRequestDiscovered(history, out var existing))
+                    {
+                        _correlation.Current = new CorrelationContext(
+                            existing.Event.CorrelationId ?? correlationId,
+                            existing.Event.CausationId);
+
+                        await _projectionUpdater.RebuildAndSaveAsync(requestId, cancellationToken).ConfigureAwait(false);
+
+                        await _publisher.PublishAsync(
+                            eventType: EventTypes.RequestDiscovered,
+                            subject: Subjects.ForRequest(requestId.Value),
+                            eventId: existing.Event.EventId,
+                            data: existing.Payload,
+                            cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                        published++;
+                    }
+                    else
+                    {
+                        _logger.LogWarning(
+                            "Request {RequestId} has no stored discovery event to re-publish.",
+                            requestId.Value);
+                    }
+
                     continue;
                 }
 
@@ -169,5 +198,28 @@ public sealed class DiscoverUnprocessedRequestsHandler
             "Discovery completed. Claimed={Claimed} Published={Published}",
             claimed,
             published);
+    }
+
+    private static bool TryFindRequestDiscovered(
+        IReadOnlyList<StoredEvent> history,
+        out (StoredEvent Event, RequestDiscoveredPayload Payload) discovered)
+    {
+        foreach (var e in history)
+        {
+            if (!string.Equals(e.EventType, EventTypes.RequestDiscovered, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var payload = e.Data.Deserialize<RequestDiscoveredPayload>(SerializerOptions);
+            if (payload is not null)
+            {
+                discovered = (e, payload);
+                return true;
+            }
+        }
+
+        discovered = default;
+        return false;
     }
 }
