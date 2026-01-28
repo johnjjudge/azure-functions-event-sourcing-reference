@@ -176,6 +176,25 @@ For a deeper explanation of the event model and consistency choices, see `docs/A
 
 ---
 
+## Operational notes (failure modes & recovery)
+
+This reference implementation is designed for **at‑least‑once** delivery and safe retries. A concise
+failure‑mode and recovery guide is in `docs/OPERATIONS.md`.
+
+---
+
+## Known gaps / next steps
+
+These are intentionally omitted to keep the reference focused and approachable:
+
+- Projection rebuild tooling / migrations / backfill safety
+- Multi‑tenant partitioning & isolation concerns
+- Advanced resiliency patterns (circuit breakers, bulkheads, etc.)
+- High‑volume Event Grid subscription filtering strategies
+- Distributed tracing beyond correlation IDs
+
+---
+
 ## License
 
 MIT. See `LICENSE`.
