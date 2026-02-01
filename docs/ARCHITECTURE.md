@@ -13,6 +13,7 @@ This document explains the key architectural choices in this repository. It’s 
 2. **Event sourcing as the source of truth**
    - The canonical history of each workflow lives in an append-only event stream.
    - Aggregates are reconstructed by replaying events when the domain rules matter.
+   - The system does not persist a separate domain model; the event stream is authoritative and the projection is a derived read model.
 
 3. **Event-driven integration**
    - Handlers publish CloudEvents to an Event Grid custom topic.

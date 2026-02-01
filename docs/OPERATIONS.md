@@ -50,6 +50,9 @@ Recovery:
 The projection is rebuildable from the event stream. If it becomes stale or inconsistent, the supported
 recovery approach is to re‑run the reducer and upsert the projection.
 
+The system does not persist a separate domain model; aggregates are rehydrated from the event stream, and
+the projection is a derived read model for operational queries.
+
 For a reference implementation, there is intentionally no bulk rebuild tooling; it is a deliberate omission
 noted in `docs/ARCHITECTURE.md`.
 
